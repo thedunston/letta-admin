@@ -1,0 +1,49 @@
+<div class="form-group">
+    <label for="api-url">API URL:</label>
+    <input type="text" id="api-url" name="api_url" value="http://localhost:8284" required>
+    <button type="button" id="test-connection-btn">Test Connection</button>
+    <span id="connection-status"></span>
+</div>
+
+<script>
+    document.getElementById('test-connection-btn').addEventListener('click', function() {
+        const apiUrl = document.getElementById('api-url').value.trim();
+        if (!apiUrl) {
+            alert('Please enter an API URL');
+            return;
+        }
+        
+        const statusElement = document.getElementById('connection-status');
+        statusElement.textContent = 'Testing connection...';
+        statusElement.style.color = 'gray';
+        
+        fetch(`${apiUrl}/health`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'ok') {
+                    statusElement.textContent = `✓ Connected (version: ${data.version})`;
+                    statusElement.style.color = 'green';
+                } else {
+                    throw new Error('Invalid response from server');
+                }
+            })
+            .catch(error => {
+                console.error('Connection test failed:', error);
+                statusElement.textContent = '✗ Connection failed';
+                statusElement.style.color = 'red';
+            });
+    });
+    
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const apiUrl = document.getElementById('api-url').value.trim();
+        if (!apiUrl) {
+            e.preventDefault();
+            alert('Please enter an API URL');
+        }
+    });
+</script> 

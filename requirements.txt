@@ -1,0 +1,4 @@
+flask
+requests
+secrets
+sqlite3

@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<!--
+@fileoverview Code Execution Interface - Web-based Python code editor and execution environment.
+
+This interface provides a secure environment for writing and executing Python code with:
+- Monaco Editor integration for advanced code editing.
+- Theme switching (Dark, Light, High Contrast) with persistent preferences.
+- Real-time code execution with output streaming.
+- Sandboxed environment for code execution.
+- Tool creation and management interface.
+- Error handling and detailed feedback.
+- Resource usage monitoring and limits.
+- Session-based security controls.
+
+The interface uses the Monaco Editor for professional code editing features including:
+- Syntax highlighting.
+- Code completion.
+- Error detection.
+- Theme customization.
+- Code formatting.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python Code Editor</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/editor/editor.main.min.css">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --border-color: #ddd;
+            --output-bg: #f4f4f4;
+        }
+
+        [data-theme="vs-dark"] {
+            --bg-color: #1e1e1e;
+            --text-color: #d4d4d4;
+            --border-color: #454545;
+            --output-bg: #2d2d2d;
+        }
+
+        [data-theme="hc-black"] {
+            --bg-color: #000000;
+            --text-color: #ffffff;
+            --border-color: #666666;
+            --output-bg: #1a1a1a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .control-panel {
+            padding: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background-color: var(--bg-color);
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        
+        .interpreter-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+        }
+
+        #python-interpreter {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #verify-interpreter {
+            background-color: #FFA500;
+            color: white;
+        }
+
+        .valid-interpreter {
+            border-color: #4CAF50 !important;
+        }
+
+        .invalid-interpreter {
+            border-color: #ff0000 !important;
+        }
+        
+        #theme-select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 14px;
+        }
+        
+        .button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        #run-button {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        #create-tool-button {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .button:hover {
+            filter: brightness(90%);
+        }
+        
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        #output {
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--output-bg) !important;
+            color: var(--text-color);
+        }
+
+        .editor-container {
+            display: flex;
+            flex: 1;
+        }
+
+        .output-container {
+            width: 50%;
+            padding: 10px;
+            background-color: var(--bg-color);
+        }
+
+        .tool-description {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .error-message {
+            color: #ff0000;
+            margin-top: 5px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .dashboard-link {
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div style="display: flex; flex-direction: column; height: 100vh;">
+        <div class="control-panel">
+            <div class="interpreter-group">
+                <input type="text" id="python-interpreter" placeholder="Python interpreter path (e.g., /usr/bin/python3)">
+                <button id="verify-interpreter" class="button">Verify</button>
+            </div>
+            <select id="theme-select">
+                <option value="vs-dark">Dark Theme</option>
+                <option value="vs-light">Light Theme</option>
+                <option value="hc-black">High Contrast</option>
+            </select>
+            <button id="run-button" class="button">Run</button>
+            <button id="create-tool-button" class="button">Create Tool</button>
+            <a href="/admin/dashboard" class="dashboard-link button">Back to Dashboard</a>
+        </div>
+        <div style="padding: 0 10px;">
+            <textarea id="tool-description" class="tool-description" placeholder="Enter Tool Description"></textarea>
+            <div id="description-error" class="error-message">Tool description is required</div>
+            <div id="code-error" class="error-message">Code is required</div>
+        </div>
+        <div class="editor-container">
+            <div id="editor" style="width: 50%; height: 80%;"></div>
+            <div class="output-container">
+                <pre id="output" style="padding: 10px; height: 80%; overflow: auto; margin: 0;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
+    <script>
+        // Get proxy URL from server.
+        const PROXY_URL = '{{ proxy_url }}';
+        
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            const userTheme = localStorage.getItem('editorTheme') || 'vs-dark';
+            
+            document.body.setAttribute('data-theme', userTheme);
+            document.getElementById('theme-select').value = userTheme;
+
+            var editor = monaco.editor.create(document.getElementById('editor'), {
+                value: `def hellowWorld():
+    """
+    This is a test function that prints "Hello World" to the console.
+
+    A Docstring is required for all functions.
+    
+    """
+    print("Hello World")`,
+                language: 'python',
+                theme: userTheme,
+                automaticLayout: true
+            });
+
+            document.getElementById('theme-select').addEventListener('change', function(e) {
+                const selectedTheme = e.target.value;
+                monaco.editor.setTheme(selectedTheme);
+                document.body.setAttribute('data-theme', selectedTheme);
+                localStorage.setItem('editorTheme', selectedTheme);
+            });
+
+            function validateInputs() {
+                const description = document.getElementById('tool-description').value.trim();
+                const code = editor.getValue().trim();
+                const descriptionError = document.getElementById('description-error');
+                const codeError = document.getElementById('code-error');
+                
+                descriptionError.style.display = description ? 'none' : 'block';
+                codeError.style.display = code ? 'none' : 'block';
+                
+                return description && code;
+            }
+
+            document.getElementById('create-tool-button').addEventListener('click', function() {
+                if (!validateInputs()) return;
+
+                const description = document.getElementById('tool-description').value.trim();
+                const code = editor.getValue();
+                const toolName = description
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '_')
+                    .replace(/^_+|_+$/g, '');
+
+                const createToolButton = this;
+                createToolButton.disabled = true;
+                createToolButton.textContent = 'Creating...';
+
+                fetch(`${PROXY_URL}/tools/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_code: code, description: description })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            try {
+                                const json = JSON.parse(text);
+                                throw new Error(json.error || `HTTP error! status: ${response.status}`);
+                            } catch (e) {
+                                throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+                            }
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    document.getElementById('output').textContent = 'Tool created successfully!\n\n' + JSON.stringify(data, null, 2);
+                    setTimeout(() => window.location.href = '/admin/dashboard', 2000);
+                })
+                .catch(error => {
+                    console.error('Error details:', error);
+                    document.getElementById('output').textContent = `Error creating tool: ${error.message}`;
+                })
+                .finally(() => {
+                    createToolButton.disabled = false;
+                    createToolButton.textContent = 'Create Tool';
+                });
+            });
+
+            document.getElementById('verify-interpreter').addEventListener('click', function() {
+                const interpreterPath = document.getElementById('python-interpreter').value.trim();
+                const verifyButton = this;
+                
+                if (!interpreterPath) {
+                    alert('Please enter a Python interpreter path');
+                    return;
+                }
+
+                verifyButton.disabled = true;
+                verifyButton.textContent = 'Verifying...';
+
+                // Verify the interpreter path, if provided.
+                fetch('/verify_interpreter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ interpreter: interpreterPath }),
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const interpreterInput = document.getElementById('python-interpreter');
+                    if (data.valid) {
+                        interpreterInput.classList.remove('invalid-interpreter');
+                        interpreterInput.classList.add('valid-interpreter');
+                        localStorage.setItem('pythonInterpreter', interpreterPath);
+                    } else {
+                        interpreterInput.classList.remove('valid-interpreter');
+                        interpreterInput.classList.add('invalid-interpreter');
+                        alert('Invalid Python interpreter: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error verifying interpreter: ' + error.message);
+                })
+                .finally(() => {
+                    verifyButton.disabled = false;
+                    verifyButton.textContent = 'Verify';
+                });
+            });
+
+            // Load saved interpreter path.
+            const savedInterpreter = localStorage.getItem('pythonInterpreter');
+            if (savedInterpreter) {
+                document.getElementById('python-interpreter').value = savedInterpreter;
+            }
+
+            document.getElementById('run-button').addEventListener('click', function() {
+                const runButton = this;
+                const code = editor.getValue();
+                const interpreter = document.getElementById('python-interpreter').value.trim();
+                
+                if (!document.getElementById('python-interpreter').classList.contains('valid-interpreter')) {
+                    alert('Please verify the Python interpreter first');
+                    return;
+                }
+                
+                runButton.disabled = true;
+                runButton.textContent = 'Running...';
+                
+                // Run the code in the sandboxed environment.
+                fetch('/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        code: code,
+                        interpreter: interpreter 
+                    }),
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 401) {
+                            alert('Your session has expired. You will be redirected to the login page.');
+                            window.location.href = '/login';
+                            return;
+                        }
+                        return response.json().then(err => {
+                            throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data) {
+                        document.getElementById('output').textContent = data.error ? data.error : data.output;
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('output').textContent = `Error: ${error.message}`;
+                })
+                .finally(() => {
+                    runButton.disabled = false;
+                    runButton.textContent = 'Run';
+                });
+            });
+
+            const updateToolId = localStorage.getItem('updateToolId');
+            if (updateToolId) {
+                fetch(`${PROXY_URL}/tools/${updateToolId}`)
+                    .then(response => response.json())
+                    .then(tool => {
+                        document.getElementById('tool-description').value = tool.description;
+                        editor.setValue(tool.source_code);
+                        localStorage.removeItem('updateToolId');
+                    })
+                    .catch(error => {
+                        console.error('Error loading tool:', error);
+                        alert('Error loading tool: ' + error.message);
+                    });
+            }
+
+            function executeCode() {
+                const interpreter = document.getElementById('python-interpreter').value.trim();
+                const requestData = {
+                    code: editor.getValue(),
+                    interpreter: interpreter || undefined
+                };
+            }
+        });
+    </script>
+</body>
+</html>
