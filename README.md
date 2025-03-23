@@ -61,7 +61,7 @@ SHA256 Hash: 1f59bdb91fc2df356bee74caec2eeb9d50269650bbceecaa50cbf9bc4924105f
 
 Set the result to the value of the "hash" key. Then login using the
 
-**Access the application**: Open your web browser and navigate to `http://localhost:8285` and login using the password set with the script `adminpass.py` script above.
+**Access the application**: Open your web browser and navigate to `http://localhost:8285` and login using the password set with the script `adminpass.py` script above and the user `identity` created with the `Organization` role.
 
 ## Screenshots
 
