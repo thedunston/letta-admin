@@ -71,7 +71,7 @@ Set the result to the value of the "hash" key. Then login using the
 ![Shows Agent Management Screen](assets/AgentManagement.png "Agent Management Screen")
 
 **Model Management**
-![Shows screen to Manage Models for the agent](assets/AgentManagement.png "Model Management for Agents")
+![Shows screen to Manage Models for the agent](assets/ModelManagement.png "Model Management for Agents")
 
 **Tool Management**
 ![Tools screen with the available buttons](assets/ToolsManagement.png "Tools Management Screen")
