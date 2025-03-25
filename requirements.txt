@@ -1,2 +1,4 @@
-flask
-requests
+requests>=2.27.1
+Flask-Cors==3.0.10
+Flask>=3.1
+Werkzeug==3.1
