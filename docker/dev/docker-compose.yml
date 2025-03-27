@@ -1,0 +1,35 @@
+services:
+  proxy:
+    extends:
+      file: ../proxy/docker-compose.yml
+      service: proxy
+
+  admin:
+    image: letta-admin
+    build: 
+      context: ../..
+      dockerfile: Dockerfile
+    ports:
+      - ${ADMIN_INTERFACE_PORT:-8285}:8285
+    environment:
+      - PROXY_URL=http://proxy:8284
+      - ADMIN_INTERFACE_DEBUG=true
+      - SECRET_KEY=${SECRET_KEY:-dev}
+      - LETTA_SERVER_PASSWORD=${LETTA_SERVER_PASSWORD:-dev_password}
+      - FLASK_DEBUG=1
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+    volumes:
+      - ../../app:/app/app
+      - ../../run.py:/app/run.py
+      - ../../requirements.txt:/app/requirements.txt
+    restart: unless-stopped
+    depends_on:
+      proxy:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8285/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s 
