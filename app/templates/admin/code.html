@@ -210,7 +210,7 @@ The interface uses the Monaco Editor for professional code editing features incl
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js"></script>
     <script>
         // Get proxy URL from server.
-        const PROXY_URL = '{{ proxy_url }}';
+        const PROXY_URL = '/proxy';
         
         require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs' }});
         require(['vs/editor/editor.main'], function() {
@@ -343,6 +343,9 @@ The interface uses the Monaco Editor for professional code editing features incl
             const savedInterpreter = localStorage.getItem('pythonInterpreter');
             if (savedInterpreter) {
                 document.getElementById('python-interpreter').value = savedInterpreter;
+            } else {
+                // Set default interpreter path based on container's Python version
+                document.getElementById('python-interpreter').value = '/usr/local/bin/python3.11';
             }
 
             document.getElementById('run-button').addEventListener('click', function() {
@@ -350,43 +353,57 @@ The interface uses the Monaco Editor for professional code editing features incl
                 const code = editor.getValue();
                 const interpreter = document.getElementById('python-interpreter').value.trim();
                 
-                if (!document.getElementById('python-interpreter').classList.contains('valid-interpreter')) {
-                    alert('Please verify the Python interpreter first');
-                    return;
-                }
-                
                 runButton.disabled = true;
                 runButton.textContent = 'Running...';
                 
                 // Run the code in the sandboxed environment.
                 fetch('/execute', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
                     body: JSON.stringify({ 
                         code: code,
                         interpreter: interpreter 
-                    }),
-                    credentials: 'same-origin'
+                    })
                 })
                 .then(response => {
-                    if (!response.ok) {
-                        if (response.status === 401) {
-                            alert('Your session has expired. You will be redirected to the login page.');
-                            window.location.href = '/login';
-                            return;
-                        }
-                        return response.json().then(err => {
-                            throw new Error(err.error || `HTTP error! status: ${response.status}`);
-                        });
+                    if (response.status === 401) {
+                        alert('Your session has expired. You will be redirected to the login page.');
+                        window.location.href = '/login';
+                        return;
                     }
-                    return response.json();
+                    return response.text().then(text => {
+                        try {
+                            const data = JSON.parse(text);
+                            // If we have output, it's a successful execution
+                            if (data.output !== undefined) {
+                                return data;
+                            }
+                            // If we have an error message, it's an error
+                            if (data.error) {
+                                throw new Error(data.error);
+                            }
+                            return data;
+                        } catch (e) {
+                            console.error('Failed to parse response:', text);
+                            return { output: text };
+                        }
+                    });
                 })
                 .then(data => {
                     if (data) {
-                        document.getElementById('output').textContent = data.error ? data.error : data.output;
+                        document.getElementById('output').textContent = data.output || '';
                     }
                 })
                 .catch(error => {
+                    console.error('Error details:', error);
+                    // If the error suggests an interpreter issue, prompt for verification
+                    if (error.message.includes('interpreter') || error.message.includes('python')) {
+                        alert('Please verify the Python interpreter path and try again.');
+                        document.getElementById('python-interpreter').classList.add('invalid-interpreter');
+                    }
                     document.getElementById('output').textContent = `Error: ${error.message}`;
                 })
                 .finally(() => {

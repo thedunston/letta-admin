@@ -1,0 +1,37 @@
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+
+# Local development
+.DS_Store
+temp_code_execution/
+
+# Docker
+.docker/ 
+
+# tmp/temp_code_execution
+tmp/
